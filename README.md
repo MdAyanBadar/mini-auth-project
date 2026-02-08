@@ -275,3 +275,4 @@ MIT
 ## Author
 
 Built as a technical assessment project.
+# mini-auth-project
