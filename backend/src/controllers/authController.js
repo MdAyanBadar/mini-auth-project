@@ -5,205 +5,194 @@ import sql from '../config/db.js';
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// Generate JWT token
+// 🔐 JWT generator for your app's internal sessions
 const generateToken = (user) => {
   return jwt.sign(
-    { 
-      id: user.id, 
-      email: user.email, 
-      name: user.name 
+    {
+      id: user.id,
+      email: user.email,
+      name: user.name,
     },
     process.env.JWT_SECRET,
     { expiresIn: '24h' }
   );
 };
 
-// Register new user
+// =======================
+// REGISTER
+// =======================
 export const register = async (req, res) => {
   try {
     const { email, password, name } = req.body;
 
-    // Validation
     if (!email || !password || !name) {
-      return res.status(400).json({ 
-        error: 'Email, password, and name are required.' 
-      });
+      return res.status(400).json({ error: 'All fields are required' });
     }
 
     if (password.length < 6) {
-      return res.status(400).json({ 
-        error: 'Password must be at least 6 characters long.' 
-      });
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
-    // Check if user already exists
     const existingUser = await sql`
-      SELECT * FROM users WHERE email = ${email}
+      SELECT id FROM users WHERE email = ${email}
     `;
 
     if (existingUser.length > 0) {
-      return res.status(409).json({ 
-        error: 'User with this email already exists.' 
-      });
+      return res.status(409).json({ error: 'User already exists' });
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert user
     const newUser = await sql`
       INSERT INTO users (email, password, name)
       VALUES (${email}, ${hashedPassword}, ${name})
-      RETURNING id, email, name, created_at
+      RETURNING id, email, name
     `;
 
-    // Generate token
     const token = generateToken(newUser[0]);
 
     res.status(201).json({
-      message: 'User registered successfully',
       token,
-      user: {
-        id: newUser[0].id,
-        email: newUser[0].email,
-        name: newUser[0].name
-      }
+      user: newUser[0],
     });
-  } catch (error) {
-    console.error('Register error:', error);
-    res.status(500).json({ 
-      error: 'Internal server error during registration.' 
-    });
+  } catch (err) {
+    console.error('Register error:', err);
+    res.status(500).json({ error: 'Registration failed' });
   }
 };
 
-// Login user
+// =======================
+// LOGIN
+// =======================
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validation
     if (!email || !password) {
-      return res.status(400).json({ 
-        error: 'Email and password are required.' 
-      });
+      return res.status(400).json({ error: 'Email and password required' });
     }
 
-    // Find user
     const users = await sql`
       SELECT * FROM users WHERE email = ${email}
     `;
 
     if (users.length === 0) {
-      return res.status(401).json({ 
-        error: 'Invalid email or password.' 
-      });
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const user = users[0];
 
-    // Check if user registered with Google (no password)
     if (!user.password) {
-      return res.status(401).json({ 
-        error: 'This account uses Google Sign-In. Please login with Google.' 
+      return res.status(401).json({
+        error: 'Use Google login for this account',
       });
     }
 
-    // Verify password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const valid = await bcrypt.compare(password, user.password);
 
-    if (!isPasswordValid) {
-      return res.status(401).json({ 
-        error: 'Invalid email or password.' 
-      });
+    if (!valid) {
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Generate token
     const token = generateToken(user);
 
     res.status(200).json({
-      message: 'Login successful',
       token,
       user: {
         id: user.id,
         email: user.email,
-        name: user.name
-      }
+        name: user.name,
+      },
     });
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ 
-      error: 'Internal server error during login.' 
-    });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Login failed' });
   }
 };
 
-// Google OAuth
+// =======================
+// GOOGLE AUTH (ROBUST FIX)
+// =======================
 export const googleAuth = async (req, res) => {
   try {
-    const { token: googleToken } = req.body;
+    const { token } = req.body;
 
-    if (!googleToken) {
-      return res.status(400).json({ 
-        error: 'Google token is required.' 
-      });
+    if (!token) {
+      return res.status(400).json({ error: 'Google token missing' });
     }
 
-    // Verify Google token
-    const ticket = await googleClient.verifyIdToken({
-      idToken: googleToken,
-      audience: process.env.GOOGLE_CLIENT_ID,
-    });
+    let email, name, googleId;
 
-    const payload = ticket.getPayload();
-    const { sub: googleId, email, name } = payload;
+    // 1. Attempt to treat as ID TOKEN (JWT)
+    // We check for '.' and 3 segments to avoid unnecessary errors
+    if (token.includes('.') && token.split('.').length === 3) {
+      try {
+        const ticket = await googleClient.verifyIdToken({
+          idToken: token,
+          audience: process.env.GOOGLE_CLIENT_ID,
+        });
 
-    // Check if user exists
-    let users = await sql`
+        const payload = ticket.getPayload();
+        if (payload) {
+          email = payload.email;
+          name = payload.name;
+          googleId = payload.sub;
+        }
+      } catch (jwtError) {
+        // Log the warning but don't stop the flow
+        console.warn('JWT verification failed, trying fallback as Access Token...');
+      }
+    }
+
+    // 2. If not a JWT or JWT verification failed, attempt as ACCESS TOKEN (ya29)
+    if (!email) {
+      try {
+        const tokenInfo = await googleClient.getTokenInfo(token);
+
+        if (!tokenInfo?.email) {
+          return res.status(401).json({ error: 'Invalid Google access token structure' });
+        }
+
+        email = tokenInfo.email;
+        googleId = tokenInfo.sub;
+        name = email.split('@')[0];
+      } catch (accessTokenError) {
+        console.error('Google token validation failed entirely:', accessTokenError.message);
+        return res.status(401).json({ error: 'Invalid or expired Google token' });
+      }
+    }
+
+    // 3. UPSERT USER
+    const users = await sql`
       SELECT * FROM users WHERE google_id = ${googleId} OR email = ${email}
     `;
 
     let user;
 
     if (users.length > 0) {
-      // User exists
       user = users[0];
 
-      // Update google_id if not set
+      // Link Google ID if the user already existed via email registration
       if (!user.google_id) {
         await sql`
-          UPDATE users 
-          SET google_id = ${googleId}
+          UPDATE users SET google_id = ${googleId}
           WHERE id = ${user.id}
         `;
-        user.google_id = googleId;
       }
     } else {
-      // Create new user
       const newUser = await sql`
         INSERT INTO users (email, name, google_id)
         VALUES (${email}, ${name}, ${googleId})
-        RETURNING id, email, name, google_id, created_at
+        RETURNING id, email, name
       `;
       user = newUser[0];
     }
 
-    // Generate custom JWT
     const jwtToken = generateToken(user);
 
-    res.status(200).json({
-      message: 'Google authentication successful',
-      token: jwtToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name
-      }
-    });
-  } catch (error) {
-    console.error('Google auth error:', error);
-    res.status(500).json({ 
-      error: 'Internal server error during Google authentication.' 
-    });
+    return res.status(200).json({ token: jwtToken, user });
+  } catch (err) {
+    console.error('General Google auth error:', err);
+    return res.status(500).json({ error: 'Google authentication failed' });
   }
 };
