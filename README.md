@@ -1,63 +1,87 @@
+
 # Mini Auth System
 
-A full-stack authentication system with JWT-based auth and Google OAuth 2.0 integration.
+A full-stack authentication system built with JWT-based authentication and Google OAuth 2.0, demonstrating secure auth flows, protected APIs, and frontend–backend integration.
+
+🔗 **Live Demo**
+
+* **Frontend (Vercel):**
+  [https://mini-auth-project-kappa.vercel.app](https://mini-auth-project-kappa.vercel.app)
+
+* **Backend (Render):**
+  [https://mini-auth-project.onrender.com](https://mini-auth-project.onrender.com)
+
+---
 
 ## Features
 
 ✅ **Email + Password Authentication**
-- User registration with validation
-- Secure login with bcrypt password hashing
-- JWT token generation (24h expiration)
+
+* User registration with validation
+* Secure login using bcrypt password hashing
+* JWT token generation (24h expiration)
 
 ✅ **Google OAuth 2.0**
-- Sign in with Google
-- Custom JWT generation for Google users
-- Automatic user creation/login
+
+* Sign in with Google
+* Backend verification of Google **ID token**
+* Custom JWT generation for Google users
 
 ✅ **Protected Routes**
-- JWT-based middleware protection
-- Token validation
-- Automatic logout on token expiration
 
-✅ **Ticket Management**
-- View all support tickets
-- Create new tickets
-- Resolve tickets (protected endpoint)
+* JWT middleware protection
+* Token validation
+* Automatic logout on invalid or expired token
+
+✅ **Ticket Management (Mock Feature)**
+
+* View support tickets
+* Create new tickets
+* Resolve tickets (protected endpoint)
+
+---
 
 ## Tech Stack
 
 ### Backend
-- **Node.js** + **Express.js**
-- **NeonDB** (PostgreSQL)
-- **JWT** for authentication
-- **bcrypt** for password hashing
-- **Google Auth Library** for OAuth
+
+* **Node.js** + **Express.js**
+* **PostgreSQL (NeonDB)**
+* **JWT** for authentication
+* **bcrypt** for password hashing
+* **google-auth-library** for OAuth
+* **Render** for deployment
 
 ### Frontend
-- **React 18** + **Vite**
-- **Redux Toolkit** for state management
-- **React Router** for navigation
-- **@react-oauth/google** for Google Sign-In
+
+* **React 18** + **Vite**
+* **Redux Toolkit** for state management
+* **React Router**
+* **@react-oauth/google**
+* **Vercel** for deployment
+
+---
 
 ## Project Structure
 
 ```
-mini-auth/
+mini-auth-project/
 ├── backend/
 │   ├── src/
 │   │   ├── config/
-│   │   │   └── db.js              # NeonDB configuration
+│   │   │   └── db.js
 │   │   ├── middleware/
-│   │   │   └── auth.js            # JWT middleware
+│   │   │   └── auth.js
 │   │   ├── controllers/
-│   │   │   ├── authController.js  # Auth logic
+│   │   │   ├── authController.js
 │   │   │   └── ticketsController.js
 │   │   ├── routes/
 │   │   │   ├── auth.js
 │   │   │   └── tickets.js
-│   │   └── server.js              # Express server
+│   │   └── server.js
 │   ├── .env.example
 │   └── package.json
+│
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
@@ -66,213 +90,198 @@ mini-auth/
 │   │   │   ├── Dashboard.jsx
 │   │   │   └── ProtectedRoute.jsx
 │   │   ├── store/
-│   │   │   ├── store.js           # Redux store
-│   │   │   └── slices/
-│   │   │       └── authSlice.js   # Auth state + thunks
+│   │   │   └── slices/authSlice.js
 │   │   ├── App.jsx
-│   │   ├── main.jsx
-│   │   └── index.css
+│   │   └── main.jsx
 │   ├── .env.example
 │   └── package.json
+│
 └── README.md
 ```
 
+---
+
 ## API Endpoints
 
-### Auth Routes
+### Auth
+
 ```
-POST   /auth/register      - Register new user
-POST   /auth/login         - Login with email/password
-POST   /auth/google        - Login with Google OAuth
+POST /auth/register
+POST /auth/login
+POST /auth/google
 ```
 
-### Tickets Routes (Protected)
+### Tickets (Protected)
+
 ```
-GET    /tickets            - Get all tickets
-POST   /tickets            - Create new ticket
-POST   /tickets/:id/resolve - Resolve a ticket
+GET  /tickets
+POST /tickets
+POST /tickets/:id/resolve
 ```
 
-## How to Run
+---
+
+## How to Run Locally
 
 ### Prerequisites
-- Node.js (v18+)
-- NeonDB account
-- Google Cloud Console project (for OAuth)
 
-### 1. Clone the Repository
-```bash
-git clone <your-repo-url>
-cd mini-auth
-```
+* Node.js (v18+)
+* PostgreSQL / NeonDB
+* Google OAuth Client ID
 
-### 2. Backend Setup
+---
+
+### Backend Setup
 
 ```bash
 cd backend
 npm install
 ```
 
-Create `.env` file:
+Create `.env`:
+
 ```env
-PORT=5000
-DATABASE_URL=postgresql://user:password@host/database
-JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+PORT=4000
+DATABASE_URL=postgresql://<connection_string>
+JWT_SECRET=your_jwt_secret
+GOOGLE_CLIENT_ID=your_google_client_id
 NODE_ENV=development
 ```
 
-**Get NeonDB Connection String:**
-1. Go to [NeonDB Console](https://console.neon.tech/)
-2. Create a new project
-3. Copy the connection string
-4. Replace `DATABASE_URL` in `.env`
+Start server:
 
-**Get Google Client ID:**
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project
-3. Enable Google+ API
-4. Create OAuth 2.0 credentials
-5. Add `http://localhost:3000` to authorized JavaScript origins
-6. Copy Client ID
-
-Start backend:
 ```bash
 npm run dev
 ```
 
-Backend will run on `http://localhost:5000`
+---
 
-### 3. Frontend Setup
+### Frontend Setup
 
 ```bash
-cd ../frontend
+cd frontend
 npm install
 ```
 
-Create `.env` file:
+Create `.env`:
+
 ```env
-VITE_API_URL=http://localhost:5000
-VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+VITE_API_URL=http://localhost:4000
+VITE_GOOGLE_CLIENT_ID=your_google_client_id
 ```
 
 Start frontend:
+
 ```bash
 npm run dev
 ```
 
-Frontend will run on `http://localhost:3000`
+---
 
-### 4. Access the Application
+## Deployment
 
-Open browser at `http://localhost:3000`
+### Frontend (Vercel)
 
-## Usage
+* Build command: `npm run build`
+* Output directory: `dist`
+* Environment variables:
 
-### Register a New User
-1. Navigate to `/register`
-2. Fill in name, email, and password (min 6 characters)
-3. Click "Sign Up" or "Continue with Google"
+```env
+VITE_API_URL=https://mini-auth-project.onrender.com
+VITE_GOOGLE_CLIENT_ID=your_google_client_id
+```
 
-### Login
-1. Navigate to `/login`
-2. Enter email and password
-3. Or click "Continue with Google"
+### Backend (Render)
 
-### View Dashboard
-- After login, you'll be redirected to `/dashboard`
-- View all support tickets
-- Resolve open tickets
-- Logout when done
+* Environment variables:
+
+```env
+DATABASE_URL=postgresql://...
+JWT_SECRET=...
+GOOGLE_CLIENT_ID=...
+```
+
+* Start command:
+
+```bash
+node src/server.js
+```
+
+---
 
 ## Edge Cases Handled
 
-✅ **Duplicate Email Registration**
-- Returns 409 Conflict error
-- Shows clear error message to user
+✔ Duplicate email registration
+✔ Invalid credentials
+✔ Google-only account blocked from email login
+✔ Missing / expired JWT
+✔ Protected route access without token
+✔ Ticket not found
+✔ Ticket already resolved
 
-✅ **Invalid Credentials**
-- Returns 401 Unauthorized
-- Generic error message for security
-
-✅ **Expired/Invalid JWT**
-- Middleware returns 401
-- Frontend automatically logs out user
-
-✅ **Google User Trying Email Login**
-- Detects null password
-- Shows helpful error message
-
-✅ **Missing Token on Protected Routes**
-- Middleware blocks access
-- Redirects to login page
-
-✅ **Ticket Not Found**
-- Returns 404 error
-- Clear error message
-
-✅ **Already Resolved Ticket**
-- Returns 400 error
-- Prevents duplicate resolution
+---
 
 ## Database Schema
 
-### Users Table
+### Users
+
 ```sql
 id          SERIAL PRIMARY KEY
-email       VARCHAR(255) UNIQUE NOT NULL
-password    VARCHAR(255)
-name        VARCHAR(255) NOT NULL
-google_id   VARCHAR(255) UNIQUE
-created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+email       VARCHAR UNIQUE NOT NULL
+password    VARCHAR
+name        VARCHAR NOT NULL
+google_id   VARCHAR UNIQUE
+created_at  TIMESTAMP
 ```
 
-### Tickets Table
+### Tickets
+
 ```sql
 id          SERIAL PRIMARY KEY
-title       VARCHAR(255) NOT NULL
+title       VARCHAR NOT NULL
 description TEXT
-status      VARCHAR(50) DEFAULT 'open'
-user_id     INTEGER REFERENCES users(id)
-created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+status      VARCHAR DEFAULT 'open'
+user_id     INTEGER
+created_at  TIMESTAMP
 resolved_at TIMESTAMP
 ```
 
+---
+
 ## Assumptions
 
-1. **Google OAuth Flow**: Frontend-initiated flow using access tokens
-2. **JWT Expiration**: 24 hours (configurable)
-3. **Password Requirements**: Minimum 6 characters
-4. **Tickets**: Mock data - in production would have more fields
-5. **No Email Verification**: Skipped for time constraint
-6. **No Refresh Tokens**: Single JWT for simplicity
-7. **No Rate Limiting**: Would add in production
-8. **CORS**: Open for development (restrict in production)
+* Google OAuth initiated on frontend, verified on backend
+* JWT expiry set to 24 hours
+* No refresh token flow (out of scope)
+* Tickets are mock domain data
+* Email verification skipped due to time constraints
 
-## Security Considerations
+---
 
-🔒 **Passwords**: Hashed with bcrypt (10 salt rounds)
-🔒 **JWT Secret**: Environment variable (change in production)
-🔒 **SQL Injection**: Parameterized queries with Neon client
-🔒 **CORS**: Configured for development
-🔒 **Token Storage**: LocalStorage (consider httpOnly cookies in production)
+## Security Notes
+
+* Passwords hashed using bcrypt
+* JWT secret stored only on backend
+* SQL injection prevented via parameterized queries
+* Frontend never stores secrets
+
+---
 
 ## Future Improvements
 
-- [ ] Refresh token mechanism
-- [ ] Email verification
-- [ ] Password reset functionality
-- [ ] Rate limiting
-- [ ] Better error handling UI
-- [ ] Unit and integration tests
-- [ ] Docker containerization
-- [ ] CI/CD pipeline
+* Refresh token mechanism
+* Role-based access control
+* Email verification
+* Password reset flow
+* Rate limiting
+* Unit & integration tests
 
-## License
-
-MIT
+---
 
 ## Author
 
+**MD Ayan Badar**
 Built as a technical assessment project.
-# mini-auth-project
+**GitHub Repository:** `mini-auth-project`
+
+
